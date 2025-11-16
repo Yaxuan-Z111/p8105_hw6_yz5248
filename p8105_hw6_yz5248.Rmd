@@ -184,6 +184,7 @@ CI_R2 =
   quantile(probs = c(0.025, 0.975))
 CI_R2
 ```
+The 95% confidence interval for $r^2$ is [0.9343259 0.9466045]
 
 ## Beta_ratio 95% Confidence Interval
 ```{r}
@@ -192,3 +193,4 @@ CI_ratio =
   quantile(probs = c(0.025, 0.975))
 CI_ratio
 ```
+The 95% confidence interval for $β₁ / β₂$ is [-280.5287 -125.6147]
