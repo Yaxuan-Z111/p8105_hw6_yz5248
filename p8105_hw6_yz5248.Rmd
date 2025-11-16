@@ -164,6 +164,7 @@ dist_r2_plot =
   theme_minimal()
 dist_r2_plot
 ```
+The bootstrap distribution of $r^2$ is approximately symmetric and concentrated around a value near 0.94. This indicates that the linear model explains a consistently large proportion of the variability in 'tmax' across bootstrap samples. The distribution is fairly narrow, suggesting that $r^2$ is estimated with relatively low uncertainty and is stable across repeated resampling of the data.
 
 ## plotting the beta_ratio distribution
 ```{r}
@@ -174,4 +175,20 @@ dist_ratio_plot =
   theme_minimal()
 dist_ratio_plot
 ```
+The bootstrap distribution of the coefficient ratio $β₁ / β₂$ is much more variable and strongly skewed. The distribution spreads widely, with values ranging from roughly –500 to –100 and a long left tail. This reflects substantial instability in the ratio, largely because $β₂$ is small and close to 0 in many samples, making the ratio highly sensitive to small changes in $β₂$. 
 
+## R^2 95% Confidence Interval
+```{r}
+CI_R2 =
+  bootstrap_results$r2 |>
+  quantile(probs = c(0.025, 0.975))
+CI_R2
+```
+
+## Beta_ratio 95% Confidence Interval
+```{r}
+CI_ratio =
+  bootstrap_results$beta_ratio |>
+  quantile(probs = c(0.025, 0.975))
+CI_ratio
+```
