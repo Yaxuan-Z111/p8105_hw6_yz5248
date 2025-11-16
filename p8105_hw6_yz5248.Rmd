@@ -1,0 +1,115 @@
+---
+title: "p8105_hw6_yz5248"
+author: "yz5248"
+date: "2025-11-15"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(broom)
+library(purrr)
+library(readr)
+```
+
+# Problem 1
+```{r}
+homicides_df = read_csv("homicide-data.csv")
+```
+
+## cleaning the data
+```{r}
+clean_df =
+  homicides_df |>
+  mutate(
+    city_state = str_c(city, ", ", state),
+    solved = if_else(
+      disposition == "Closed by arrest", 1, 0
+    ),
+    victim_age = as.numeric(victim_age)
+  ) |>
+  filter(!city_state %in% c(
+    "Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL"
+  )) |>
+  filter(victim_race %in% c("Black", "White")) |>
+  filter(victim_sex %in% c("Male", "Female")) |>
+  mutate(
+    victim_sex = as.factor(victim_sex)
+  )|>
+  drop_na(victim_age, victim_sex, victim_race)
+```
+
+## fitting GLM function
+```{r}
+baltimore_df =
+  clean_df |>
+  filter(city_state == "Baltimore, MD")
+
+baltimore_fit =
+  glm(
+    solved ~ victim_age + victim_sex + victim_race,
+    data = baltimore_df,
+    family = binomial()
+  )
+
+baltimore_results =
+  baltimore_fit |>
+  broom::tidy(conf.int = TRUE, exponentiate = TRUE)
+
+baltimore_results
+```
+
+```{r}
+baltimore_OR_male =
+  baltimore_results |>
+  filter(term == "victim_sexMale") |>
+  select(term, estimate, conf.low, conf.high)
+
+baltimore_OR_male
+```
+
+## running for whole dataset
+```{r}
+nested_df =
+  clean_df |>
+  group_by(city_state) |>
+  nest()
+
+results_df =
+  nested_df |>
+  mutate(
+    fit = map(data, ~ glm(
+      solved ~ victim_age + victim_sex + victim_race,
+      data = .x,
+      family = binomial()
+    )),
+    
+    tidy_fit = map(fit, ~ tidy(
+      .x,
+      conf.int = TRUE,
+      exponentiate = TRUE
+    ))
+  ) |>
+  unnest(tidy_fit) |>
+  filter(term == "victim_sexMale") |>
+  select(
+    city_state, estimate, conf.low, conf.high
+  )
+results_df
+```
+
+## plotting the result
+```{r}
+results_plot =
+  results_df |>
+  arrange(estimate) |>   
+  mutate(city_state = factor(city_state, levels = city_state)) |>
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  coord_flip() +
+  theme_minimal(base_size = 10)
+
+results_plot
+```
+
