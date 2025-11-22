@@ -10,6 +10,7 @@ library(tidyverse)
 library(broom)
 library(purrr)
 library(readr)
+library(modelr)
 ```
 
 # Problem 1
@@ -194,3 +195,78 @@ CI_ratio =
 CI_ratio
 ```
 The 95% confidence interval for $β₁ / β₂$ is [-280.5287 -125.6147]
+
+
+# Problem 3
+```{r}
+birthweight_df = 
+  read_csv("birthweight.csv") |>
+  janitor::clean_names() 
+```
+
+## convert numeric variable to factor
+```{r}
+birthweight_df = 
+  birthweight_df |> 
+  mutate(
+    babysex = factor(
+      babysex, 
+      levels = c(1, 2), 
+      labels = c("male", "female")
+    ),
+    malform = factor(
+      malform, 
+      levels = c(0, 1),
+      labels = c("absent", "present")
+    ),
+    frace = factor(frace),
+    mrace = factor(mrace)
+  )
+
+```
+
+## Check missing data
+```{r}
+missing_summary =
+  birthweight_df |> 
+  summarise(across(everything(), ~ sum(is.na(.x)))) |> 
+  pivot_longer(everything(),
+               names_to = "variable",
+               values_to = "missing_n") 
+
+print(missing_summary)
+```
+
+## Fit model 1
+```{r}
+mod1 = lm(
+  bwt ~ gaweeks + blength + babysex + mheight + ppbmi + wtgain + smoken + momage + mrace, data = birthweight_df
+)
+
+summary(mod1)
+```
+I constructed my regression model using a combination of  hypothesized structure model and data-driven exploration. From a biological perspective, birthweight is primarily determined by fetal size and duration of gestation; thus I included gestational age, birth length, and infant sex. Maternal anthropometrics (height, pre-pregnancy BMI) and pregnancy weight gain reflect nutritional environment and were included based on established literature.  
+I then examined correlations and exploratory plots, identifying smoking during pregnancy as strongly associated with reduced birthweight. Maternal age and race also showed moderate associations and were added. Interaction terms and higher-order polynomials were not included to avoid unnecessary complexity, as supported by residual diagnostics.
+
+```{r}
+resid_plot =
+  birthweight_df |>
+  add_predictions(mod1) |>
+  add_residuals(mod1) |>
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.4) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(
+    x = "Fitted Birthweight (grams)",
+    y = "Residuals"
+  )
+
+resid_plot
+```
+- Residuals are centered around zero across the entire fitted range. This indicates that the model does not systematically over- or under-predict birthweight at any particular level of fitted values. The horizontal spread of points around the red dashed line (y = 0) supports the assumption that the model’s mean structure is reasonably well specified.
+
+- The point cloud does not display a pronounced U‐shape or inverted U‐shape. This suggests that the relationship between predictors and birthweight does not show obvious unmodeled nonlinearity. A linear model appears appropriate for capturing the main trends.
+
+- Variability is roughly constant, though with mild heteroscedasticity： There is slightly greater spread of residuals at higher fitted birthweights (around 3000–4000 grams). 
+
+- A few extreme residuals appear, but they are rare.
